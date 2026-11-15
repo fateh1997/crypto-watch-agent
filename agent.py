@@ -25,18 +25,21 @@ import urllib.parse
 import urllib.request
 from collections import namedtuple
 from pathlib import Path
-
+from groq import Groq
 WATCHLIST = ["BTC", "ETH", "SOL"]
 KRAKEN_PAIRS = {"BTC": "XBTUSD", "ETH": "ETHUSD", "SOL": "SOLUSD"}  # Kraken's own symbols,
 # ported from Assignment 1's fetch.py - don't guess these, Kraken uses its own names.
 
 INTERVAL = 1440          # daily candles
-VOLATILITY_WINDOW = 30   # days of returns
-TREND_WINDOW = 7         # NOTE: ported as-is from Assignment 1's metrics.py. The
-                          # Assignment 2 brief's own example says "30-day average" -
-                          # decide if you're keeping 7 (and why) or switching to 30,
-                          # then say so in playbook.md/README. One-line change either way.
+VOLATILITY_WINDOW = 30
+TREND_WINDOW = 7
 DRAWDOWN_WINDOW = 30
+
+MODEL = "..."            # YOUR CALL - check console.groq.com/docs/models, pick one
+SYSTEM_PROMPT = """..."""   # YOUR CALL - the watch question, watchlist, tool-first
+                             # instruction, and the exact final-JSON shape you want back
+
+client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 Candle = namedtuple("Candle", "time open high low close vwap volume count")
 
@@ -243,6 +246,32 @@ TOOLS = {
     },
 }
 
+def _tool_schemas():
+    return [
+        {"type": "function", "function": {
+            "name": "market_summary",
+            "description": TOOLS["market_summary"]["description"],
+            "parameters": {
+                "type": "object",
+                "properties": {"coin": {"type": "string", "enum": WATCHLIST}},
+                "required": ["coin"],
+            },
+        }},
+        {"type": "function", "function": {
+            "name": "get_history",
+            "description": TOOLS["get_history"]["description"],
+            "parameters": {"type": "object", "properties": {}},
+        }},
+        {"type": "function", "function": {
+            "name": "search_playbook",
+            "description": TOOLS["search_playbook"]["description"],
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+            },
+        }},
+    ]
 
 # ---------------------------------------------------------------------------
 # Guardrails - run in code, after the AI answers. The AI cannot talk its way past these.
@@ -278,13 +307,44 @@ def check_advice_language(message: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def run_agent_loop(step_limit: int = 8) -> dict:
-    """
-    TODO (Step 6): the AI asks for tools by name, your code runs them and feeds results
-    back, until the AI gives a final JSON answer, or step_limit is hit (an error, not a
-    silent stop). Log every tool call.
-    """
-    raise NotImplementedError("TODO: implement agent loop (Step 6)")
-
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": "..."},   # YOUR CALL - the actual ask
+    ]
+    for step in range(step_limit):
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            tools=_tool_schemas(),
+            tool_choice="auto",
+        )
+        msg = response.choices[0].message
+        if msg.tool_calls:
+            messages.append(msg)
+            for call in msg.tool_calls:
+                name = call.function.name
+                args = json.loads(call.function.arguments)
+                print(f"[step {step}] tool call: {name}({args})")  # YOUR CALL - real log format
+                try:
+                    result = TOOLS[name]["fn"](**args)
+                except Exception as e:
+                    result = {"error": str(e)}
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": json.dumps(result),
+                })
+            continue
+        # No tool call -> this is meant to be the final answer. Only a bare parse
+        # here; full shape/required-key checking is Step 7's job (validate_decision_json),
+        # called separately after this function returns.
+        try:
+            return json.loads(msg.content)
+        except json.JSONDecodeError:
+            messages.append({"role": "user",
+                              "content": "That wasn't valid JSON. Reply with only the final JSON decision."})
+            continue
+    raise RuntimeError(f"Agent did not produce a final answer within {step_limit} steps")
 
 def make_plan() -> list:
     """
