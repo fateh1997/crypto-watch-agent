@@ -1,0 +1,28 @@
+/**
+ * Apps Script scaffold for the Agent tab. Structural skeleton only — mirrors the
+ * weather-agent pattern (Session 8/9), not its content. Fill in the actual logic
+ * yourself, then deploy as a New version (not a new deployment) after every change
+ * so the URL stays stable.
+ *
+ * Required Script Properties (Project Settings > Script Properties), never hard-coded:
+ *   KEY        - shared secret, must match GROQ-side calls to this script
+ *   EMAIL_TO   - where alert emails go
+ *
+ * This file is committed to the public repo as a reference copy. Keep it free of any
+ * real key, URL, or email address before committing — placeholders only.
+ */
+
+function doGet(e) {
+  // TODO: if e.parameter.key !== PropertiesService.getScriptProperties().getProperty('KEY'),
+  //       return an error response.
+  // TODO: read and return recent rows from the Agent tab (your "memory" history read),
+  //       probably as JSON, so the agent's memory tool can parse it.
+}
+
+function doPost(e) {
+  // TODO: verify key the same way as doGet.
+  // TODO: parse the posted decision JSON.
+  // TODO: append a new row to the Agent tab (decision, message, sources, timestamp, etc. -
+  //       match whatever keys your agent's JSON contract actually produces).
+  // TODO: if the decision is an alert, send the email via MailApp/GmailApp to EMAIL_TO.
+}

@@ -1,0 +1,26 @@
+name: Tests
+
+on:
+  push:
+    paths:
+      # TODO: adjust these globs to match your actual filenames once agent.py exists.
+      - "agent.py"
+      - "playbook.md"
+      - "requirements.txt"
+      - ".github/workflows/tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      # TODO: this must run your fake-data test mode only - no live Kraken calls. The
+      # memory tools (get_history/save_decision) also need swapping for fakes in test
+      # mode, or this job needs GROQ_API_KEY/SHEET_URL/AGENT_KEY secrets too.
+      - run: python agent.py --mode test
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}

@@ -1,0 +1,24 @@
+name: Daily agent run
+
+on:
+  schedule:
+    # TODO: pick a UTC time. Example below is 06:00 UTC daily - adjust to taste.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}   # lets you trigger a manual run from the Actions tab
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      # TODO: once you've decided which version (Step 13) runs daily, set the mode flag below
+      # to match - e.g. `python agent.py --mode daily` or `python agent.py --mode daily --planner`.
+      - run: python agent.py --mode daily
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SHEET_URL: ${{ secrets.SHEET_URL }}
+          AGENT_KEY: ${{ secrets.AGENT_KEY }}   # new: shared key the memory tools send to Apps Script
