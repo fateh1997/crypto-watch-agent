@@ -39,7 +39,6 @@ MODEL = "..."            # YOUR CALL - check console.groq.com/docs/models, pick 
 SYSTEM_PROMPT = """..."""   # YOUR CALL - the watch question, watchlist, tool-first
                              # instruction, and the exact final-JSON shape you want back
 
-client = Groq(api_key=os.environ["GROQ_API_KEY"])
 
 Candle = namedtuple("Candle", "time open high low close vwap volume count")
 
@@ -307,6 +306,7 @@ def check_advice_language(message: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def run_agent_loop(step_limit: int = 8) -> dict:
+    client = Groq(api_key=os.environ["GROQ_API_KEY"])
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": "..."},   # YOUR CALL - the actual ask
